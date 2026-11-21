@@ -1,0 +1,8 @@
+{
+  "name": "Depósito 14 — Controle de Itens Vencidos",
+  "description": "Aplicativo para cadastro manual e extração via planilha de itens vencidos no Depósito 14, com controle de descrição, marca, lote, data de validade, saldo atual e rua/palete.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

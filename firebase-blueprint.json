@@ -1,0 +1,291 @@
+{
+  "entities": {
+    "ExpiredItem": {
+      "title": "Item Vencido - Depósito 14",
+      "description": "Registro de produto vencido armazenado no Depósito 14, cadastrado manualmente ou extraído de planilha.",
+      "type": "object",
+      "properties": {
+        "descricao": {
+          "type": "string",
+          "description": "Descrição completa do produto (pode estar vazia em importações parciais)",
+          "maxLength": 200
+        },
+        "unidade": {
+          "type": "string",
+          "description": "Unidade de medida do produto (ex.: UN, CX, KG, PCT, L)",
+          "maxLength": 30
+        },
+        "lote": {
+          "type": "string",
+          "description": "Código do lote de fabricação",
+          "maxLength": 80
+        },
+        "dataValidade": {
+          "type": "string",
+          "format": "date",
+          "description": "Data de validade no formato YYYY-MM-DD ou vazio quando não informada",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^(|\\d{4}-\\d{2}-\\d{2})$"
+        },
+        "saldoAtual": {
+          "type": "number",
+          "description": "Quantidade em estoque vencido (saldo atual)"
+        },
+        "ruaPalete": {
+          "type": "string",
+          "description": "Localização física no depósito (Rua e Palete)",
+          "maxLength": 80
+        },
+        "deposito": {
+          "type": "string",
+          "description": "Identificação do depósito",
+          "enum": ["Depósito 14"],
+          "maxLength": 30
+        },
+        "statusTratativa": {
+          "type": "string",
+          "description": "Observação do item (Sem observação, Falta, Sobra ou Avaria)",
+          "enum": ["nenhuma", "falta", "sobra", "avaria", "pendente", "em_separacao", "descartado", "devolvido"],
+          "maxLength": 30
+        },
+        "etapaKanban": {
+          "type": "string",
+          "description": "Etapa operacional do item no fluxo Kanban",
+          "enum": ["lote_ajustado", "retirado_da_reserva", "remessa_realizada"],
+          "maxLength": 40
+        },
+        "origemCadastro": {
+          "type": "string",
+          "description": "Origem do registro",
+          "enum": ["manual", "planilha"],
+          "maxLength": 20
+        },
+        "observacoes": {
+          "type": "string",
+          "description": "Observações operacionais adicionais",
+          "maxLength": 500
+        },
+        "importBatchId": {
+          "type": "string",
+          "description": "Identificador do lote de importação de planilha",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID do usuário responsável pelo registro",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de criação gerado pelo servidor"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp da última atualização gerado pelo servidor"
+        }
+      },
+      "required": [
+        "descricao",
+        "unidade",
+        "lote",
+        "dataValidade",
+        "saldoAtual",
+        "ruaPalete",
+        "deposito",
+        "statusTratativa",
+        "origemCadastro",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ImportBatch": {
+      "title": "Lote de Importação de Planilha",
+      "description": "Registro de uma importação em lote via planilha para o Depósito 14.",
+      "type": "object",
+      "properties": {
+        "nomeArquivo": {
+          "type": "string",
+          "description": "Nome do arquivo de planilha importado",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "totalLinhas": {
+          "type": "integer",
+          "description": "Quantidade de itens importados neste lote"
+        },
+        "deposito": {
+          "type": "string",
+          "description": "Identificação do depósito",
+          "enum": ["Depósito 14"],
+          "maxLength": 30
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID do usuário que realizou a importação",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de criação gerado pelo servidor"
+        }
+      },
+      "required": [
+        "nomeArquivo",
+        "totalLinhas",
+        "deposito",
+        "ownerId",
+        "createdAt"
+      ]
+    },
+    "ItemExit": {
+      "title": "Registro de Saída - Depósito 14",
+      "description": "Movimentação de saída de item vencido do Depósito 14 com dedução atômica do saldo atual.",
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "description": "ID do item vencido em expiredItems",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "descricao": {
+          "type": "string",
+          "description": "Descrição do produto no momento da saída",
+          "maxLength": 200
+        },
+        "unidade": {
+          "type": "string",
+          "description": "Unidade de medida do produto no momento da saída",
+          "maxLength": 30
+        },
+        "lote": {
+          "type": "string",
+          "description": "Lote do produto",
+          "maxLength": 80
+        },
+        "dataValidade": {
+          "type": "string",
+          "format": "date",
+          "description": "Data de validade YYYY-MM-DD ou vazio quando não informada",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^(|\\d{4}-\\d{2}-\\d{2})$"
+        },
+        "ruaPalete": {
+          "type": "string",
+          "description": "Rua / Palete de origem da retirada",
+          "maxLength": 80
+        },
+        "quantidadeSaida": {
+          "type": "number",
+          "description": "Quantidade retirada na saída"
+        },
+        "saldoAnterior": {
+          "type": "number",
+          "description": "Saldo antes da movimentação de saída"
+        },
+        "saldoPosterior": {
+          "type": "number",
+          "description": "Saldo restante após a saída"
+        },
+        "motivoSaida": {
+          "type": "string",
+          "description": "Motivo da saída do item vencido",
+          "enum": [
+            "descarte",
+            "devolucao_fornecedor",
+            "doacao",
+            "transferencia",
+            "consumo_interno",
+            "ajuste_inventario"
+          ],
+          "maxLength": 40
+        },
+        "dataSaida": {
+          "type": "string",
+          "format": "date",
+          "description": "Data da saída YYYY-MM-DD",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "responsavel": {
+          "type": "string",
+          "description": "Nome do responsável pela retirada ou baixa",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "documentoRef": {
+          "type": "string",
+          "description": "Número de NF, MTR ou documento de referência",
+          "maxLength": 100
+        },
+        "observacoes": {
+          "type": "string",
+          "description": "Observações sobre a saída",
+          "maxLength": 500
+        },
+        "deposito": {
+          "type": "string",
+          "description": "Identificação do depósito",
+          "enum": ["Depósito 14"],
+          "maxLength": 30
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID do usuário responsável pelo registro",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp de criação gerado pelo servidor"
+        }
+      },
+      "required": [
+        "itemId",
+        "descricao",
+        "unidade",
+        "lote",
+        "dataValidade",
+        "ruaPalete",
+        "quantidadeSaida",
+        "saldoAnterior",
+        "saldoPosterior",
+        "motivoSaida",
+        "dataSaida",
+        "responsavel",
+        "deposito",
+        "ownerId",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/expiredItems/{itemId}": {
+      "schema": { "$ref": "#/entities/ExpiredItem" },
+      "description": "Coleção principal de itens vencidos registrados no Depósito 14."
+    },
+    "/importBatches/{batchId}": {
+      "schema": { "$ref": "#/entities/ImportBatch" },
+      "description": "Histórico de importações realizadas por planilha no Depósito 14."
+    },
+    "/itemExits/{exitId}": {
+      "schema": { "$ref": "#/entities/ItemExit" },
+      "description": "Histórico de saídas e baixas de saldo de itens vencidos no Depósito 14."
+    }
+  }
+}

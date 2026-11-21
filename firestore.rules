@@ -1,0 +1,263 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() &&
+        request.auth.token.email == 'paula.alves@plantebemtec.com.br';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidExpiredItem(data) {
+      let allowedKeys = [
+        'descricao',
+        'unidade',
+        'marca',
+        'lote',
+        'dataValidade',
+        'saldoAtual',
+        'ruaPalete',
+        'deposito',
+        'statusTratativa',
+        'etapaKanban',
+        'origemCadastro',
+        'observacoes',
+        'importBatchId',
+        'ownerId',
+        'createdAt',
+        'updatedAt'
+      ];
+      let requiredKeys = [
+        'descricao',
+        'lote',
+        'dataValidade',
+        'saldoAtual',
+        'ruaPalete',
+        'deposito',
+        'statusTratativa',
+        'origemCadastro',
+        'ownerId',
+        'createdAt',
+        'updatedAt'
+      ];
+
+      return data.keys().hasAll(requiredKeys) &&
+        data.keys().hasOnly(allowedKeys) &&
+        data.descricao is string && data.descricao.size() <= 200 &&
+        (!('unidade' in data) || (data.unidade is string && data.unidade.size() <= 30)) &&
+        (!('marca' in data) || (data.marca is string && data.marca.size() <= 100)) &&
+        data.lote is string && data.lote.size() <= 80 &&
+        data.dataValidade is string && data.dataValidade.size() <= 10 && (data.dataValidade == '' || (data.dataValidade.size() == 10 && data.dataValidade.matches('^\\d{4}-\\d{2}-\\d{2}$'))) &&
+        (data.saldoAtual is int || data.saldoAtual is float) && data.saldoAtual >= 0 && data.saldoAtual <= 10000000 &&
+        data.ruaPalete is string && data.ruaPalete.size() <= 80 &&
+        data.deposito is string && data.deposito == 'Depósito 14' &&
+        data.statusTratativa is string && data.statusTratativa in ['nenhuma', 'falta', 'sobra', 'avaria', 'pendente', 'em_separacao', 'descartado', 'devolvido'] &&
+        (!('etapaKanban' in data) || (data.etapaKanban is string && data.etapaKanban in ['lote_ajustado', 'retirado_da_reserva', 'remessa_realizada'])) &&
+        data.origemCadastro is string && data.origemCadastro in ['manual', 'planilha'] &&
+        (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 500)) &&
+        (!('importBatchId' in data) || (data.importBatchId is string && isValidId(data.importBatchId))) &&
+        data.ownerId is string && isValidId(data.ownerId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidImportBatch(data) {
+      let requiredKeys = ['nomeArquivo', 'totalLinhas', 'deposito', 'ownerId', 'createdAt'];
+      return data.keys().hasAll(requiredKeys) &&
+        data.keys().hasOnly(requiredKeys) &&
+        data.nomeArquivo is string && data.nomeArquivo.size() >= 1 && data.nomeArquivo.size() <= 200 &&
+        data.totalLinhas is int && data.totalLinhas >= 1 && data.totalLinhas <= 5000 &&
+        data.deposito is string && data.deposito == 'Depósito 14' &&
+        data.ownerId is string && isValidId(data.ownerId) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidItemExit(data) {
+      let allowedKeys = [
+        'itemId',
+        'descricao',
+        'unidade',
+        'marca',
+        'lote',
+        'dataValidade',
+        'ruaPalete',
+        'quantidadeSaida',
+        'saldoAnterior',
+        'saldoPosterior',
+        'motivoSaida',
+        'dataSaida',
+        'responsavel',
+        'documentoRef',
+        'observacoes',
+        'deposito',
+        'ownerId',
+        'createdAt'
+      ];
+      let requiredKeys = [
+        'itemId',
+        'descricao',
+        'unidade',
+        'lote',
+        'dataValidade',
+        'ruaPalete',
+        'quantidadeSaida',
+        'saldoAnterior',
+        'saldoPosterior',
+        'motivoSaida',
+        'dataSaida',
+        'responsavel',
+        'deposito',
+        'ownerId',
+        'createdAt'
+      ];
+
+      return data.keys().hasAll(requiredKeys) &&
+        data.keys().hasOnly(allowedKeys) &&
+        data.itemId is string && isValidId(data.itemId) &&
+        data.descricao is string && data.descricao.size() <= 200 &&
+        data.unidade is string && data.unidade.size() <= 30 &&
+        (!('marca' in data) || (data.marca is string && data.marca.size() <= 100)) &&
+        data.lote is string && data.lote.size() <= 80 &&
+        data.dataValidade is string && data.dataValidade.size() <= 10 && (data.dataValidade == '' || (data.dataValidade.size() == 10 && data.dataValidade.matches('^\\d{4}-\\d{2}-\\d{2}$'))) &&
+        data.ruaPalete is string && data.ruaPalete.size() <= 80 &&
+        (data.quantidadeSaida is int || data.quantidadeSaida is float) && data.quantidadeSaida > 0 && data.quantidadeSaida <= 10000000 &&
+        (data.saldoAnterior is int || data.saldoAnterior is float) && data.saldoAnterior >= 0 && data.saldoAnterior <= 10000000 &&
+        (data.saldoPosterior is int || data.saldoPosterior is float) && data.saldoPosterior >= 0 && data.saldoPosterior <= 10000000 &&
+        data.quantidadeSaida <= data.saldoAnterior &&
+        data.saldoPosterior <= data.saldoAnterior &&
+        data.motivoSaida is string && data.motivoSaida in [
+          'descarte',
+          'devolucao_fornecedor',
+          'doacao',
+          'transferencia',
+          'consumo_interno',
+          'ajuste_inventario'
+        ] &&
+        data.dataSaida is string && data.dataSaida.size() == 10 && data.dataSaida.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.responsavel is string && data.responsavel.size() >= 1 && data.responsavel.size() <= 120 &&
+        (!('documentoRef' in data) || (data.documentoRef is string && data.documentoRef.size() <= 100)) &&
+        (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 500)) &&
+        data.deposito is string && data.deposito == 'Depósito 14' &&
+        data.ownerId is string && isValidId(data.ownerId) &&
+        data.createdAt is timestamp;
+    }
+
+    match /expiredItems/{itemId} {
+      allow get: if isVerifiedUser() && isValidId(itemId) && existing().deposito == 'Depósito 14';
+      allow list: if isVerifiedUser() && resource.data.deposito == 'Depósito 14';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(itemId) &&
+        isValidExpiredItem(incoming()) &&
+        'unidade' in incoming() &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isBootstrappedAdmin() &&
+            (!('importBatchId' in incoming()) || existsAfter(/databases/$(database)/documents/importBatches/$(incoming().importBatchId)))
+          ) ||
+          (
+            incoming().origemCadastro == 'manual' &&
+            incoming().statusTratativa == 'nenhuma' &&
+            (!('etapaKanban' in incoming()) || incoming().etapaKanban == 'lote_ajustado') &&
+            !('importBatchId' in incoming())
+          )
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(itemId) &&
+        isValidExpiredItem(incoming()) &&
+        existing().deposito == 'Depósito 14' &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().deposito == existing().deposito &&
+        incoming().origemCadastro == existing().origemCadastro &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['saldoAtual', 'statusTratativa', 'updatedAt']) &&
+            incoming().saldoAtual < existing().saldoAtual
+          ) ||
+          (
+            isBootstrappedAdmin() &&
+            (
+              (incoming().diff(existing()).affectedKeys().hasOnly(['statusTratativa', 'updatedAt'])) ||
+              (incoming().diff(existing()).affectedKeys().hasOnly(['etapaKanban', 'updatedAt'])) ||
+              (incoming().diff(existing()).affectedKeys().hasOnly(['saldoAtual', 'statusTratativa', 'updatedAt'])) ||
+              (incoming().diff(existing()).affectedKeys().hasOnly([
+                'descricao',
+                'unidade',
+                'lote',
+                'dataValidade',
+                'saldoAtual',
+                'ruaPalete',
+                'statusTratativa',
+                'etapaKanban',
+                'observacoes',
+                'updatedAt'
+              ]))
+            )
+          )
+        );
+
+      allow delete: if isBootstrappedAdmin() && isValidId(itemId);
+    }
+
+    match /importBatches/{batchId} {
+      allow get: if isBootstrappedAdmin() && isValidId(batchId);
+      allow list: if isBootstrappedAdmin();
+
+      allow create: if isBootstrappedAdmin() &&
+        isValidId(batchId) &&
+        isValidImportBatch(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isBootstrappedAdmin() && isValidId(batchId);
+    }
+
+    match /itemExits/{exitId} {
+      allow get: if isVerifiedUser() && isValidId(exitId) && existing().deposito == 'Depósito 14';
+      allow list: if isVerifiedUser() && resource.data.deposito == 'Depósito 14';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(exitId) &&
+        isValidItemExit(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/expiredItems/$(incoming().itemId)) &&
+        get(/databases/$(database)/documents/expiredItems/$(incoming().itemId)).data.deposito == 'Depósito 14' &&
+        getAfter(/databases/$(database)/documents/expiredItems/$(incoming().itemId)).data.saldoAtual == incoming().saldoPosterior &&
+        getAfter(/databases/$(database)/documents/expiredItems/$(incoming().itemId)).data.updatedAt == request.time;
+
+      allow update: if false;
+      allow delete: if isBootstrappedAdmin() && isValidId(exitId);
+    }
+  }
+}
