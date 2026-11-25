@@ -236,6 +236,35 @@
           "description": "Observações sobre a saída",
           "maxLength": 500
         },
+        "statusRecolhimento": {
+          "type": "string",
+          "description": "Status da confirmação de recolhimento físico pela equipe de separação",
+          "enum": ["aguardando_recolhimento", "recolhido"],
+          "maxLength": 30
+        },
+        "recolhidoPor": {
+          "type": "string",
+          "description": "Nome do integrante da equipe de separação que confirmou o recolhimento",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "recolhidoPorUid": {
+          "type": "string",
+          "description": "UID do usuário que confirmou o recolhimento físico",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recolhidoEm": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp da confirmação de recolhimento gerado pelo servidor"
+        },
+        "observacaoRecolhimento": {
+          "type": "string",
+          "description": "Observação opcional registrada pela equipe de separação no recolhimento",
+          "maxLength": 300
+        },
         "deposito": {
           "type": "string",
           "description": "Identificação do depósito",
@@ -268,6 +297,7 @@
         "motivoSaida",
         "dataSaida",
         "responsavel",
+        "statusRecolhimento",
         "deposito",
         "ownerId",
         "createdAt"

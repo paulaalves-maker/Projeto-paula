@@ -27,6 +27,7 @@ import {
   bulkDeleteItemExits,
   bulkUpdateKanbanStage,
   bulkUpdateStatus,
+  confirmExitCollection,
   createManualExpiredItem,
   deleteAllSpreadsheetImports,
   deleteExpiredItem,
@@ -34,6 +35,7 @@ import {
   deleteItemExit,
   importSpreadsheetItemsBatch,
   registerItemExit,
+  reopenExitCollection,
   reverseItemExit,
   subscribeExpiredItems,
   subscribeImportBatches,
@@ -52,6 +54,7 @@ import {
   StatusTratativa,
   formatNumberPtBr,
   isUserAdmin,
+  normalizeStatusRecolhimento,
 } from './types/inventory';
 
 function WarehouseWorkspace() {
@@ -201,6 +204,9 @@ function WarehouseWorkspace() {
     }
 
     const totalSaidasQtd = exits.reduce((acc, ex) => acc + ex.quantidadeSaida, 0);
+    const pendingCollectionCount = exits.filter(
+      (ex) => normalizeStatusRecolhimento(ex.statusRecolhimento) === 'aguardando_recolhimento',
+    ).length;
 
     const allLocations = Array.from(locationsMap.entries())
       .map(([ruaPalete, stats]) => ({ ruaPalete, ...stats }))
@@ -214,6 +220,7 @@ function WarehouseWorkspace() {
       ocorrencias,
       totalEnderecos: locationsMap.size,
       totalSaidasQtd,
+      pendingCollectionCount,
       hasAvailableForExit,
       topLocations,
       allLocations,
@@ -286,13 +293,15 @@ function WarehouseWorkspace() {
   async function handleConfirmExit(input: ItemExitInput) {
     if (!user) return;
     await registerItemExit(user.uid, input);
-    showToast('Saída registrada e saldo atualizado.');
+    showToast('Solicitação de saída registrada; aguardando recolhimento.');
   }
 
   function applyKpiFilter(status: 'todos' | 'ocorrencias', onlyWithBalance: boolean) {
     setActiveTab('lista');
     setPresetFilter({ status, onlyWithBalance, nonce: Date.now() });
   }
+
+  const collectorDisplayName = user.displayName || user.email || '';
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -301,6 +310,7 @@ function WarehouseWorkspace() {
         onSelectTab={setActiveTab}
         totalItens={items.length}
         totalExits={exits.length}
+        pendingCollectionCount={metrics.pendingCollectionCount}
         totalBatches={batches.length}
         topLocations={metrics.topLocations}
         activeLocationFilter={locationFilter}
@@ -401,18 +411,26 @@ function WarehouseWorkspace() {
               <button
                 type="button"
                 onClick={() => setActiveTab('saidas')}
-                title="Abrir histórico de saídas"
+                title="Abrir histórico de saídas e conferência de recolhimento"
                 className="p-4 sm:px-5 text-left hover:bg-slate-50 transition-colors group cursor-pointer"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-medium text-slate-500 group-hover:text-slate-700">
-                    Saídas Baixadas
+                    Saídas Registradas
                   </p>
                   <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-700 transition-colors shrink-0" />
                 </div>
-                <p className="mt-1 font-mono text-2xl font-semibold text-slate-900 tabular-nums">
-                  {formatNumberPtBr(metrics.totalSaidasQtd)}
-                </p>
+                <div className="mt-1 flex items-baseline gap-2.5">
+                  <p className="font-mono text-2xl font-semibold text-slate-900 tabular-nums">
+                    {formatNumberPtBr(metrics.totalSaidasQtd)}
+                  </p>
+                  {metrics.pendingCollectionCount > 0 && (
+                    <span className="text-xs font-medium text-amber-700 whitespace-nowrap">
+                      {metrics.pendingCollectionCount}{' '}
+                      {metrics.pendingCollectionCount === 1 ? 'a recolher' : 'a recolher'}
+                    </span>
+                  )}
+                </div>
               </button>
 
               <button
@@ -575,7 +593,16 @@ function WarehouseWorkspace() {
               loading={loadingExits}
               hasAvailableItems={metrics.hasAvailableForExit}
               canReverse={effectiveIsAdmin}
+              defaultCollectorName={collectorDisplayName}
               onOpenNewExit={() => openExitModalForItem(null)}
+              onConfirmCollection={async (exitId, recolhidoPor, observacaoRecolhimento) => {
+                await confirmExitCollection(exitId, user.uid, recolhidoPor, observacaoRecolhimento);
+                showToast('Recolhimento confirmado pela separação.');
+              }}
+              onReopenCollection={async (exitId) => {
+                await reopenExitCollection(exitId);
+                showToast('Conferência de recolhimento reaberta.');
+              }}
               onReverseExit={async (ex) => {
                 await reverseItemExit(ex);
                 showToast('Saída estornada e saldo devolvido.');
@@ -638,9 +665,14 @@ function WarehouseWorkspace() {
         item={inspectingItem}
         exits={exits}
         canEdit={effectiveIsAdmin}
+        defaultCollectorName={collectorDisplayName}
         onClose={() => setInspectingItemId(null)}
         onRegisterExit={(item) => openExitModalForItem(item)}
         onEditItem={(item) => setEditingItem(item)}
+        onConfirmExitCollection={async (exitId, recolhidoPor) => {
+          await confirmExitCollection(exitId, user.uid, recolhidoPor);
+          showToast('Recolhimento confirmado pela separação.');
+        }}
         onChangeStatus={async (id, status) => {
           await updateItemStatus(id, status);
           showToast('Observação atualizada.');

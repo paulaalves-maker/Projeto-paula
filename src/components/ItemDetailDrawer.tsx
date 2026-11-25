@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
   MapPin,
   PackageMinus,
   Pencil,
@@ -20,15 +23,18 @@ import {
   formatIsoToBrDate,
   formatNumberPtBr,
   normalizeObservacaoStatus,
+  normalizeStatusRecolhimento,
 } from '../types/inventory';
 
 interface ItemDetailDrawerProps {
   item: ExpiredItem | null;
   exits: ItemExit[];
   canEdit: boolean;
+  defaultCollectorName: string;
   onClose: () => void;
   onRegisterExit: (item: ExpiredItem) => void;
   onEditItem: (item: ExpiredItem) => void;
+  onConfirmExitCollection: (exitId: string, recolhidoPor: string) => Promise<void>;
   onChangeStatus: (itemId: string, status: StatusTratativa) => Promise<void>;
   onChangeKanbanStage: (itemId: string, stage: EtapaKanban) => Promise<void>;
 }
@@ -39,14 +45,17 @@ export function ItemDetailDrawer({
   item,
   exits,
   canEdit,
+  defaultCollectorName,
   onClose,
   onRegisterExit,
   onEditItem,
+  onConfirmExitCollection,
   onChangeStatus,
   onChangeKanbanStage,
 }: ItemDetailDrawerProps) {
   const [updatingStage, setUpdatingStage] = useState(false);
   const [updatingObs, setUpdatingObs] = useState(false);
+  const [confirmingExitId, setConfirmingExitId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!item) return;
@@ -266,23 +275,60 @@ export function ItemDetailDrawer({
               </p>
             ) : (
               <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                {itemExits.map((ex) => (
-                  <div key={ex.id} className="px-3 py-2.5 text-xs space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-semibold text-slate-900 tabular-nums">
-                        -{formatNumberPtBr(ex.quantidadeSaida)} {ex.unidade || ''}
-                      </span>
-                      <span className="font-mono text-[11px] text-slate-500 tabular-nums">
-                        {formatIsoToBrDate(ex.dataSaida)}
-                      </span>
+                {itemExits.map((ex) => {
+                  const isRecolhido =
+                    normalizeStatusRecolhimento(ex.statusRecolhimento) === 'recolhido';
+                  return (
+                    <div key={ex.id} className="px-3 py-2.5 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-semibold text-slate-900 tabular-nums">
+                          -{formatNumberPtBr(ex.quantidadeSaida)} {ex.unidade || ''}
+                        </span>
+                        <span className="font-mono text-[11px] text-slate-500 tabular-nums">
+                          {formatIsoToBrDate(ex.dataSaida)}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
+                        <span>{MOTIVO_SAIDA_LABELS[ex.motivoSaida]}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{ex.responsavel}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        {isRecolhido ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                            <CheckCircle2 className="w-3 h-3 shrink-0" />
+                            <span>Recolhido por {ex.recolhidoPor}</span>
+                          </span>
+                        ) : (
+                          <>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
+                              <Clock className="w-3 h-3 shrink-0" />
+                              <span>Aguardando recolhimento</span>
+                            </span>
+                            <button
+                              type="button"
+                              disabled={confirmingExitId === ex.id}
+                              onClick={async () => {
+                                setConfirmingExitId(ex.id);
+                                try {
+                                  await onConfirmExitCollection(ex.id, defaultCollectorName);
+                                } finally {
+                                  setConfirmingExitId(null);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>
+                                {confirmingExitId === ex.id ? 'Confirmando...' : 'Confirmar'}
+                              </span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
-                      <span>{MOTIVO_SAIDA_LABELS[ex.motivoSaida]}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{ex.responsavel}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -275,11 +275,24 @@ export const MOTIVO_SAIDA_LABELS: Record<MotivoSaida, string> = {
   ajuste_inventario: 'Ajuste de Inventário',
 };
 
+export type StatusRecolhimento = 'aguardando_recolhimento' | 'recolhido';
+
+export const STATUS_RECOLHIMENTO_LABELS: Record<StatusRecolhimento, string> = {
+  aguardando_recolhimento: 'Aguardando recolhimento',
+  recolhido: 'Recolhido',
+};
+
+export function normalizeStatusRecolhimento(value: unknown): StatusRecolhimento {
+  return value === 'recolhido' ? 'recolhido' : 'aguardando_recolhimento';
+}
+
 export const EXIT_FIELD_LIMITS = {
   responsavelMin: 1,
   responsavelMax: 120,
   documentoRefMax: 100,
   observacoesMax: 500,
+  recolhidoPorMax: 120,
+  observacaoRecolhimentoMax: 300,
 } as const;
 
 export interface ItemExit {
@@ -298,6 +311,11 @@ export interface ItemExit {
   responsavel: string;
   documentoRef?: string;
   observacoes?: string;
+  statusRecolhimento: StatusRecolhimento;
+  recolhidoPor?: string;
+  recolhidoPorUid?: string;
+  recolhidoEm?: Timestamp | null;
+  observacaoRecolhimento?: string;
   deposito: typeof DEPOSITO_PADRAO;
   ownerId: string;
   createdAt: Timestamp | null;

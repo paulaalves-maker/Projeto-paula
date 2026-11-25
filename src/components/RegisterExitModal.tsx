@@ -164,7 +164,7 @@ export function RegisterExitModal({
                 Registrar Saída — Depósito 14
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                A baixa reduzirá automaticamente o saldo atual do item selecionado.
+                A baixa reduz o saldo e fica como Aguardando recolhimento até a equipe de separação confirmar a retirada física.
               </p>
             </div>
           </div>
@@ -357,7 +357,7 @@ export function RegisterExitModal({
 
             <div className="space-y-1.5">
               <label htmlFor="exit-resp" className="block text-xs font-semibold text-slate-700">
-                Responsável pela Retirada <span className="text-red-600">*</span>
+                Solicitante / Responsável <span className="text-red-600">*</span>
               </label>
               <input
                 id="exit-resp"
@@ -370,7 +370,7 @@ export function RegisterExitModal({
                     setErrors((prev) => ({ ...prev, responsavel: undefined }));
                   }
                 }}
-                placeholder="Nome de quem retirou ou autorizou"
+                placeholder="Quem solicitou ou registrou a saída"
                 className={`w-full px-3.5 py-2 text-sm text-slate-900 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-700 ${
                   errors.responsavel ? 'border-red-500' : 'border-slate-300'
                 }`}

@@ -27,6 +27,7 @@ interface SidebarProps {
   onSelectTab: (tab: WorkspaceTab) => void;
   totalItens: number;
   totalExits: number;
+  pendingCollectionCount?: number;
   totalBatches: number;
   topLocations: LocationSummary[];
   activeLocationFilter: string;
@@ -46,6 +47,7 @@ export function Sidebar({
   onSelectTab,
   totalItens,
   totalExits,
+  pendingCollectionCount = 0,
   totalBatches,
   topLocations,
   activeLocationFilter,
@@ -64,11 +66,18 @@ export function Sidebar({
     label: string;
     icon: typeof LayoutList;
     count?: number;
+    pendingCount?: number;
     adminOnly?: boolean;
   }[] = [
     { id: 'lista', label: 'Itens Vencidos', icon: LayoutList, count: totalItens },
     { id: 'kanban', label: 'Kanban Operacional', icon: Kanban, count: totalItens, adminOnly: true },
-    { id: 'saidas', label: 'Saídas Registradas', icon: PackageMinus, count: totalExits },
+    {
+      id: 'saidas',
+      label: 'Saídas Registradas',
+      icon: PackageMinus,
+      count: totalExits,
+      pendingCount: pendingCollectionCount,
+    },
     { id: 'manual', label: 'Cadastro Manual', icon: Keyboard },
     { id: 'planilha', label: 'Extrair de Planilha', icon: FileSpreadsheet, adminOnly: true },
     { id: 'historico', label: 'Importações', icon: History, count: totalBatches, adminOnly: true },
@@ -118,15 +127,27 @@ export function Sidebar({
                   <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </span>
-                {typeof item.count === 'number' && (
-                  <span
-                    className={`font-mono text-xs tabular-nums ${
-                      isActive ? 'text-slate-300' : 'text-slate-400'
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
+                <span className="flex items-center gap-1.5 shrink-0">
+                  {typeof item.pendingCount === 'number' && item.pendingCount > 0 && (
+                    <span
+                      title={`${item.pendingCount} aguardando recolhimento`}
+                      className={`font-mono text-[11px] font-semibold tabular-nums ${
+                        isActive ? 'text-amber-300' : 'text-amber-700'
+                      }`}
+                    >
+                      {item.pendingCount} pend.
+                    </span>
+                  )}
+                  {typeof item.count === 'number' && (
+                    <span
+                      className={`font-mono text-xs tabular-nums ${
+                        isActive ? 'text-slate-300' : 'text-slate-400'
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </span>
               </button>
             );
           })}

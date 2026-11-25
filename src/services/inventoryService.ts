@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -30,6 +31,7 @@ import {
   StatusTratativa,
   VALID_DATE_REGEX,
   normalizeObservacaoStatus,
+  normalizeStatusRecolhimento,
   sanitizeItemInput,
 } from '../types/inventory';
 
@@ -168,6 +170,12 @@ export function subscribeItemExits(
           responsavel: String(d.responsavel ?? ''),
           documentoRef: typeof d.documentoRef === 'string' ? d.documentoRef : '',
           observacoes: typeof d.observacoes === 'string' ? d.observacoes : '',
+          statusRecolhimento: normalizeStatusRecolhimento(d.statusRecolhimento),
+          recolhidoPor: typeof d.recolhidoPor === 'string' ? d.recolhidoPor : '',
+          recolhidoPorUid: typeof d.recolhidoPorUid === 'string' ? d.recolhidoPorUid : '',
+          recolhidoEm: d.recolhidoEm ?? null,
+          observacaoRecolhimento:
+            typeof d.observacaoRecolhimento === 'string' ? d.observacaoRecolhimento : '',
           deposito: DEPOSITO_PADRAO,
           ownerId: String(d.ownerId ?? ''),
           createdAt: d.createdAt ?? null,
@@ -566,6 +574,7 @@ export async function registerItemExit(uid: string, input: ItemExitInput): Promi
         motivoSaida: input.motivoSaida,
         dataSaida: input.dataSaida.trim().slice(0, 10),
         responsavel: input.responsavel.trim().slice(0, EXIT_FIELD_LIMITS.responsavelMax),
+        statusRecolhimento: 'aguardando_recolhimento',
         deposito: DEPOSITO_PADRAO,
         ownerId: uid,
         createdAt: nowServer,
@@ -649,6 +658,53 @@ export async function bulkDeleteItemExits(exitIds: string[]): Promise<void> {
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, 'itemExits');
+  }
+}
+
+export async function confirmExitCollection(
+  exitId: string,
+  uid: string,
+  recolhidoPor: string,
+  observacaoRecolhimento?: string,
+): Promise<void> {
+  const cleanName = recolhidoPor.trim().slice(0, EXIT_FIELD_LIMITS.recolhidoPorMax);
+  if (!cleanName) {
+    throw new Error('Informe o nome de quem confirmou o recolhimento.');
+  }
+  const cleanObs = observacaoRecolhimento
+    ? observacaoRecolhimento.trim().slice(0, EXIT_FIELD_LIMITS.observacaoRecolhimentoMax)
+    : '';
+
+  const exitRef = doc(db, 'itemExits', exitId);
+  const payload: Record<string, unknown> = {
+    statusRecolhimento: 'recolhido',
+    recolhidoPor: cleanName,
+    recolhidoPorUid: uid,
+    recolhidoEm: serverTimestamp(),
+  };
+  if (cleanObs) {
+    payload.observacaoRecolhimento = cleanObs;
+  }
+
+  try {
+    await updateDoc(exitRef, payload);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `itemExits/${exitId}`);
+  }
+}
+
+export async function reopenExitCollection(exitId: string): Promise<void> {
+  const exitRef = doc(db, 'itemExits', exitId);
+  try {
+    await updateDoc(exitRef, {
+      statusRecolhimento: 'aguardando_recolhimento',
+      recolhidoPor: deleteField(),
+      recolhidoPorUid: deleteField(),
+      recolhidoEm: deleteField(),
+      observacaoRecolhimento: deleteField(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `itemExits/${exitId}`);
   }
 }
 

@@ -8,11 +8,13 @@ import {
   ItemExit,
   MOTIVO_SAIDA_LABELS,
   STATUS_LABELS,
+  STATUS_RECOLHIMENTO_LABELS,
   StatusTratativa,
   VALID_DATE_REGEX,
   formatIsoToBrDate,
   getMissingItemFields,
   normalizeObservacaoStatus,
+  normalizeStatusRecolhimento,
   sanitizeItemInput,
 } from '../types/inventory';
 
@@ -575,29 +577,47 @@ export function exportSelectedReportToExcel(
 }
 
 export function exportExitsToExcel(exits: ItemExit[]): void {
-  const rows = exits.map((ex) => ({
-    Depósito: ex.deposito,
-    'Data da Saída': formatIsoToBrDate(ex.dataSaida),
-    'Descrição do Produto': ex.descricao,
-    Unidade: ex.unidade,
-    Lote: ex.lote,
-    'Data de Validade': ex.dataValidade ? formatIsoToBrDate(ex.dataValidade) : '',
-    'Rua / Palete': ex.ruaPalete,
-    'Quantidade Saída': ex.quantidadeSaida,
-    'Saldo Anterior': ex.saldoAnterior,
-    'Saldo Posterior': ex.saldoPosterior,
-    Motivo: MOTIVO_SAIDA_LABELS[ex.motivoSaida],
-    Responsável: ex.responsavel,
-    Documento: ex.documentoRef || '',
-    Observações: ex.observacoes || '',
-  }));
+  const rows = exits.map((ex) => {
+    const statusRec = normalizeStatusRecolhimento(ex.statusRecolhimento);
+    const recolhidoEmText =
+      ex.recolhidoEm && typeof ex.recolhidoEm.toDate === 'function'
+        ? ex.recolhidoEm.toDate().toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '';
+
+    return {
+      Depósito: ex.deposito,
+      'Data da Saída': formatIsoToBrDate(ex.dataSaida),
+      'Descrição do Produto': ex.descricao,
+      Unidade: ex.unidade,
+      Lote: ex.lote,
+      'Data de Validade': ex.dataValidade ? formatIsoToBrDate(ex.dataValidade) : '',
+      'Rua / Palete': ex.ruaPalete,
+      'Quantidade Saída': ex.quantidadeSaida,
+      'Saldo Anterior': ex.saldoAnterior,
+      'Saldo Posterior': ex.saldoPosterior,
+      Motivo: MOTIVO_SAIDA_LABELS[ex.motivoSaida],
+      'Solicitante / Responsável': ex.responsavel,
+      Documento: ex.documentoRef || '',
+      Observações: ex.observacoes || '',
+      'Status Recolhimento': STATUS_RECOLHIMENTO_LABELS[statusRec],
+      'Recolhido Por': ex.recolhidoPor || '',
+      'Data/Hora Recolhimento': recolhidoEmText,
+      'Obs. Recolhimento': ex.observacaoRecolhimento || '',
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   worksheet['!cols'] = [
     { wch: 14 },
     { wch: 14 },
     { wch: 36 },
-    { wch: 18 },
+    { wch: 12 },
     { wch: 16 },
     { wch: 16 },
     { wch: 24 },
@@ -605,9 +625,13 @@ export function exportExitsToExcel(exits: ItemExit[]): void {
     { wch: 14 },
     { wch: 14 },
     { wch: 24 },
-    { wch: 22 },
+    { wch: 24 },
     { wch: 18 },
-    { wch: 30 },
+    { wch: 28 },
+    { wch: 24 },
+    { wch: 24 },
+    { wch: 20 },
+    { wch: 28 },
   ];
 
   const workbook = XLSX.utils.book_new();

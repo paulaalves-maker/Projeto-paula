@@ -112,6 +112,11 @@ service cloud.firestore {
         'responsavel',
         'documentoRef',
         'observacoes',
+        'statusRecolhimento',
+        'recolhidoPor',
+        'recolhidoPorUid',
+        'recolhidoEm',
+        'observacaoRecolhimento',
         'deposito',
         'ownerId',
         'createdAt'
@@ -129,6 +134,7 @@ service cloud.firestore {
         'motivoSaida',
         'dataSaida',
         'responsavel',
+        'statusRecolhimento',
         'deposito',
         'ownerId',
         'createdAt'
@@ -160,6 +166,23 @@ service cloud.firestore {
         data.responsavel is string && data.responsavel.size() >= 1 && data.responsavel.size() <= 120 &&
         (!('documentoRef' in data) || (data.documentoRef is string && data.documentoRef.size() <= 100)) &&
         (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 500)) &&
+        data.statusRecolhimento is string && data.statusRecolhimento in ['aguardando_recolhimento', 'recolhido'] &&
+        (
+          (
+            data.statusRecolhimento == 'aguardando_recolhimento' &&
+            !('recolhidoPor' in data) &&
+            !('recolhidoPorUid' in data) &&
+            !('recolhidoEm' in data) &&
+            !('observacaoRecolhimento' in data)
+          ) ||
+          (
+            data.statusRecolhimento == 'recolhido' &&
+            'recolhidoPor' in data && data.recolhidoPor is string && data.recolhidoPor.size() >= 1 && data.recolhidoPor.size() <= 120 &&
+            'recolhidoPorUid' in data && data.recolhidoPorUid is string && isValidId(data.recolhidoPorUid) &&
+            'recolhidoEm' in data && data.recolhidoEm is timestamp &&
+            (!('observacaoRecolhimento' in data) || (data.observacaoRecolhimento is string && data.observacaoRecolhimento.size() <= 300))
+          )
+        ) &&
         data.deposito is string && data.deposito == 'Depósito 14' &&
         data.ownerId is string && isValidId(data.ownerId) &&
         data.createdAt is timestamp;
@@ -249,6 +272,7 @@ service cloud.firestore {
       allow create: if isVerifiedUser() &&
         isValidId(exitId) &&
         isValidItemExit(incoming()) &&
+        incoming().statusRecolhimento == 'aguardando_recolhimento' &&
         incoming().ownerId == request.auth.uid &&
         incoming().createdAt == request.time &&
         exists(/databases/$(database)/documents/expiredItems/$(incoming().itemId)) &&
@@ -256,7 +280,35 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/expiredItems/$(incoming().itemId)).data.saldoAtual == incoming().saldoPosterior &&
         getAfter(/databases/$(database)/documents/expiredItems/$(incoming().itemId)).data.updatedAt == request.time;
 
-      allow update: if false;
+      allow update: if isVerifiedUser() &&
+        isValidId(exitId) &&
+        isValidItemExit(incoming()) &&
+        existing().deposito == 'Depósito 14' &&
+        incoming().itemId == existing().itemId &&
+        incoming().deposito == existing().deposito &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'statusRecolhimento',
+          'recolhidoPor',
+          'recolhidoPorUid',
+          'recolhidoEm',
+          'observacaoRecolhimento'
+        ]) &&
+        (
+          (
+            (!('statusRecolhimento' in existing()) || existing().statusRecolhimento == 'aguardando_recolhimento') &&
+            incoming().statusRecolhimento == 'recolhido' &&
+            incoming().recolhidoPorUid == request.auth.uid &&
+            incoming().recolhidoEm == request.time
+          ) ||
+          (
+            isBootstrappedAdmin() &&
+            existing().statusRecolhimento == 'recolhido' &&
+            incoming().statusRecolhimento == 'aguardando_recolhimento'
+          )
+        );
+
       allow delete: if isBootstrappedAdmin() && isValidId(exitId);
     }
   }
